@@ -1,186 +1,86 @@
-# Chatwoot MCP Server
+# Chatwoot MCP Server (`v1.1.0`)
 
-Este é um servidor MCP (Model Context Protocol) que fornece ferramentas para interagir com a API do Chatwoot.
+Servidor **Model Context Protocol (MCP)** completo para organizar, auditar e gerenciar instâncias do **Chatwoot** via clientes MCP locais (**Antigravity**, **Claude Desktop**, **Cursor**) ou remotos (**Cloudflare Workers**, **Docker**, **n8n**).
 
-## Ferramentas Disponíveis
+## Destaques da Versão `1.1.0`
 
-1. `chatwoot_setup`: Configura a conexão com o Chatwoot
-   - Parâmetros:
-     - `baseUrl`: URL base da sua instalação do Chatwoot
-     - `apiToken`: Token de API do Chatwoot
+- **Autenticação segura por variáveis de ambiente (`.env`)** com recarregamento automático (sem expor tokens no prompt da IA).
+- **Transporte `Stdio` nativo em Node.js** (`dist/stdio.js`) para execução local imediata, mantendo compatibilidade com **Cloudflare Workers** (`src/index.ts`) e **Docker** (`Dockerfile` / `docker-compose.yml`).
+- **27 ferramentas administrativas e operacionais** cobrindo canais, agentes, times, etiquetas, atributos personalizados, respostas rápidas, regras de automação, notas privadas internas (`private: true`) e triagem de conversas em lote.
+- **Governança e LGPD (`CHATWOOT_ALLOWED_INBOX_IDS`)**: trava opcional para limitar quais caixas de entrada um agente automatizado pode acessar.
 
-2. `chatwoot_list_inboxes`: Lista todas as caixas de entrada
-   - Sem parâmetros
+---
 
-3. `chatwoot_list_conversations`: Lista conversas
-   - Parâmetros opcionais:
-     - `inbox_id`: ID da caixa de entrada
-     - `status`: Status das conversas ("open", "resolved", "pending")
+## Catálogo de 27 Ferramentas MCP
 
-4. `chatwoot_send_message`: Envia uma mensagem
-   - Parâmetros:
-     - `conversation_id`: ID da conversa
-     - `message`: Conteúdo da mensagem
-     - `message_type`: Tipo da mensagem ("incoming" ou "outgoing")
+### Diagnóstico, Canais e Equipes
+- `chatwoot_get_profile` — Verifica perfil, permissões e contas vinculadas ao token.
+- `chatwoot_setup` — Override opcional de credenciais em memória (`baseUrl`, `apiToken`, `accountId`).
+- `chatwoot_list_inboxes` — Lista caixas de entrada e suas configurações.
+- `chatwoot_update_inbox` — Atualiza nome, `enable_auto_assignment`, saudação automática e `lock_to_single_conversation`.
+- `chatwoot_list_agents` — Lista todos os atendentes humanos, papéis (`administrator`/`agent`) e disponibilidade.
+- `chatwoot_list_teams` / `chatwoot_upsert_team` / `chatwoot_manage_team_members` — Cria/atualiza times e adiciona ou remove agentes.
 
-5. `chatwoot_update_conversation`: Atualiza o status de uma conversa
-   - Parâmetros:
-     - `conversation_id`: ID da conversa
-     - `status`: Novo status ("open", "resolved", "pending")
+### Taxonomia, Atributos, Respostas Rápidas e Regras Automáticas
+- `chatwoot_list_labels` / `chatwoot_upsert_label` / `chatwoot_delete_label` — Gerencia etiquetas da conta, cores, descrições e exibição na sidebar.
+- `chatwoot_list_custom_attributes` / `chatwoot_create_custom_attribute` — Gerencia definições de atributos personalizados para conversas e contatos.
+- `chatwoot_list_canned_responses` / `chatwoot_upsert_canned_response` — Gerencia respostas rápidas (`/atalho`).
+- `chatwoot_list_automation_rules` / `chatwoot_upsert_automation_rule` — Lista, cria e edita regras nativas de automação e roteamento do Chatwoot.
 
-## Instalação
+### Triagem de Conversas (Individual e em Lote) e Contatos
+- `chatwoot_get_conversation_counts` — Contadores exatos (`mine_count`, `unassigned_count`, `assigned_count`, `all_count`) por status, caixa, time ou etiquetas.
+- `chatwoot_list_conversations` — Listagem paginada e resumida com filtros (`status`, `assignee_type`, `inbox_id`, `team_id`, `labels`, `q`, `sort_by`).
+- `chatwoot_get_conversation_messages` — Obtém metadados e histórico completo de mensagens e notas privadas de uma conversa.
+- `chatwoot_send_message` — Envia mensagem pública ao contato ou cria **nota privada interna** (`private: true`).
+- `chatwoot_update_conversation` — Altera status (`open`, `resolved`, `pending`, `snoozed`) via `toggle_status` e/ou prioridade.
+- `chatwoot_assign_conversation` — Atribui ou desatribui conversa a agente e/ou time.
+- `chatwoot_set_conversation_labels` — Define ou acrescenta etiquetas (`append: true`) em uma conversa.
+- `chatwoot_bulk_triage_conversations` — Executa triagem em lote (até 50 conversas por chamada: nota privada + etiquetas + atribuição + mudança de status).
+- `chatwoot_search_contacts` / `chatwoot_update_contact` — Pesquisa e atualiza cadastro, `custom_attributes` e etiquetas de contatos.
 
-### Desenvolvimento Local
+---
 
-1. Clone o repositório
-2. Instale as dependências:
+## Instalação e Uso Local (`Stdio`)
+
+1. Instale as dependências e compile o servidor:
    ```bash
    npm install
+   npm run build
    ```
-3. Inicie o servidor de desenvolvimento:
+
+2. Crie seu arquivo `.env` a partir do `.env.example`:
    ```bash
-   npm run start
+   cp .env.example .env
+   ```
+   Preencha `CHATWOOT_BASE_URL`, `CHATWOOT_ACCOUNT_ID` e `CHATWOOT_API_TOKEN` (obtido no Chatwoot em **Configurações do Perfil → Token de Acesso**).
+
+3. Registre no seu cliente MCP (`mcp_config.json` / `claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "chatwoot": {
+         "command": "node",
+         "args": ["/caminho/absoluto/para/chatwoot-mcp/dist/stdio.js"],
+         "env": {
+           "CHATWOOT_BASE_URL": "https://chatwoot.seudominio.com.br",
+           "CHATWOOT_ACCOUNT_ID": "1",
+           "CHATWOOT_API_TOKEN": "SEU_TOKEN_AQUI"
+         }
+       }
+     }
+   }
    ```
 
-### Deploy com Docker
+---
 
-1. Clone o repositório
-2. Construa e inicie os containers:
-   ```bash
-   docker-compose up -d
-   ```
+## Uso com Docker ou Cloudflare Workers
 
-O servidor estará disponível em `http://localhost:8787/sse`.
-
-## Uso com Clientes MCP
-
-1. Conecte-se ao servidor usando a URL: `http://seu-servidor:8787/sse`
-2. Configure o cliente usando a ferramenta `chatwoot_setup`
-3. Comece a usar as outras ferramentas disponíveis
-
-## Exemplo de Uso
-
-```typescript
-// Configurar o cliente
-await mcp.invoke("chatwoot_setup", {
-  baseUrl: "https://seu-chatwoot.com",
-  apiToken: "seu-token-api"
-});
-
-// Listar caixas de entrada
-const inboxes = await mcp.invoke("chatwoot_list_inboxes");
-
-// Listar conversas abertas
-const conversations = await mcp.invoke("chatwoot_list_conversations", {
-  status: "open"
-});
-
-// Enviar mensagem
-await mcp.invoke("chatwoot_send_message", {
-  conversation_id: 123,
-  message: "Olá! Como posso ajudar?",
-  message_type: "outgoing"
-});
-```
-
-## Connect the MCP inspector to your server
-
-To explore your new MCP api, you can use the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector).
-
-- Start it with `npx @modelcontextprotocol/inspector`
-- [Within the inspector](http://localhost:5173), switch the Transport Type to `SSE` and enter `http://localhost:8787/sse` as the URL of the MCP server to connect to, and click "Connect"
-- You will navigate to a (mock) user/password login screen. Input any email and pass to login.
-- You should be redirected back to the MCP Inspector and you can now list and call any defined tools!
-
-<div align="center">
-  <img src="img/mcp-inspector-sse-config.png" alt="MCP Inspector with the above config" width="600"/>
-</div>
-
-<div align="center">
-  <img src="img/mcp-inspector-successful-tool-call.png" alt="MCP Inspector with after a tool call" width="600"/>
-</div>
-
-## Connect Claude Desktop to your local MCP server
-
-The MCP inspector is great, but we really want to connect this to Claude! Follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config to find your configuration file.
-
-Open the file in your text editor and replace it with this configuration:
-
-```json
-{
-  "mcpServers": {
-    "chatwoot": {
-      "description": "Servidor MCP para integração com Chatwoot",
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://mcp-chatwoot.stacklab.digital/sse"
-      ],
-      "enabled": true
-    }
-  }
-}
-```
-
-This will run a local proxy and let Claude talk to your MCP server over HTTP
-
-When you open Claude a browser window should open and allow you to login. You should see the tools available in the bottom right. Given the right prompt Claude should ask to call the tool.
-
-<div align="center">
-  <img src="img/available-tools.png" alt="Clicking on the hammer icon shows a list of available tools" width="600"/>
-</div>
-
-<div align="center">
-  <img src="img/claude-does-math-the-fancy-way.png" alt="Claude answers the prompt 'I seem to have lost my calculator and have run out of fingers. Could you use the math tool to add 23 and 19?' by invoking the MCP add tool" width="600"/>
-</div>
-
-## Deploy to Cloudflare
-
-1. `npx wrangler kv namespace create OAUTH_KV`
-2. Follow the guidance to add the kv namespace ID to `wrangler.jsonc`
-3. `npm run deploy`
-
-## Call your newly deployed remote MCP server from a remote MCP client
-
-Just like you did above in "Develop locally", run the MCP inspector:
-
-`npx @modelcontextprotocol/inspector@latest`
-
-Then enter the `workers.dev` URL (ex: `worker-name.account-name.workers.dev/sse`) of your Worker in the inspector as the URL of the MCP server to connect to, and click "Connect".
-
-You've now connected to your MCP server from a remote MCP client.
-
-## Connect Claude Desktop to your remote MCP server
-
-Update the Claude configuration file to point to your `workers.dev` URL (ex: `worker-name.account-name.workers.dev/sse`) and restart Claude 
-
-```json
-{
-  "mcpServers": {
-    "chatwoot": {
-      "description": "Servidor MCP para integração com Chatwoot",
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://mcp-chatwoot.stacklab.digital/sse"
-      ],
-      "enabled": true
-    }
-  }
-}
-```
-
-## Debugging
-
-Should anything go wrong it can be helpful to restart Claude, or to try connecting directly to your
-MCP server on the command line with the following command.
-
-```bash
-npx mcp-remote https://mcp-chatwoot.stacklab.digital/sse
-```
-
-In some rare cases it may help to clear the files added to `~/.mcp-auth`
-
-```bash
-rm -rf ~/.mcp-auth
-```
+- **Docker:**
+  ```bash
+  docker compose up -d --build
+  ```
+- **Cloudflare Workers:**
+  Configure as variáveis/secrets (`wrangler secret put CHATWOOT_API_TOKEN`, etc.) e publique com:
+  ```bash
+  npm run deploy
+  ```

@@ -1,21 +1,16 @@
-FROM node:18-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-# Copiar arquivos do projeto
 COPY package*.json ./
-COPY tsconfig.json ./
-COPY wrangler.toml ./
+RUN npm ci
+
+COPY tsconfig.json tsconfig.stdio.json wrangler.jsonc ./
 COPY src ./src
+COPY static ./static
 
-# Instalar dependências
-RUN npm install
-
-# Compilar TypeScript
 RUN npm run build
 
-# Expor a porta
 EXPOSE 8787
 
-# Comando para iniciar o servidor
-CMD ["npm", "run", "start"] 
+CMD ["npm", "run", "start"]

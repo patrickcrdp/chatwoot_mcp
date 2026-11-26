@@ -1,17 +1,21 @@
 {
-	"name": "remote-mcp-server",
-	"version": "0.0.0",
+	"name": "chatwoot-mcp",
+	"version": "1.1.0",
 	"private": true,
+	"type": "module",
 	"scripts": {
+		"build": "tsc -p tsconfig.stdio.json",
+		"start:stdio": "node dist/stdio.js",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"format": "biome format --write",
 		"lint:fix": "biome lint --fix",
-		"start": "wrangler dev",
+		"start": "wrangler dev --ip 0.0.0.0",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250402.0",
+		"@types/node": "^22.13.10",
 		"marked": "^15.0.7",
 		"typescript": "^5.5.2",
 		"workers-mcp": "^0.1.0-3",
