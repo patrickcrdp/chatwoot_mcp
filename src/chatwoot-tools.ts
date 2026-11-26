@@ -886,8 +886,9 @@ export class ChatwootTools {
 				phone_number: z.string().optional(),
 				custom_attributes: z.record(z.any()).optional(),
 				labels: z.array(z.string()).optional(),
+				append_labels: z.boolean().default(true),
 			},
-			async ({ contact_id, labels, ...fields }) => {
+			async ({ contact_id, labels, append_labels, ...fields }) => {
 				const cfg = this.requireConfig();
 				const out: Record<string, unknown> = {};
 				if (Object.keys(fields).length > 0) {
@@ -900,11 +901,19 @@ export class ChatwootTools {
 					);
 				}
 				if (labels) {
+					let finalLabels = labels;
+					if (append_labels) {
+						const existing = await this.request<{ payload?: string[] }>(
+							`/api/v1/accounts/${cfg.accountId}/contacts/${contact_id}/labels`
+						);
+						const current = Array.isArray(existing?.payload) ? existing.payload : [];
+						finalLabels = Array.from(new Set([...current, ...labels]));
+					}
 					out.labels = await this.request(
 						`/api/v1/accounts/${cfg.accountId}/contacts/${contact_id}/labels`,
 						{
 							method: "POST",
-							body: JSON.stringify({ labels }),
+							body: JSON.stringify({ labels: finalLabels }),
 						}
 					);
 				}
